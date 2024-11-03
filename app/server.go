@@ -24,34 +24,39 @@ func main() {
 		os.Exit(1)
 	}
 
+	
+	for {
 		// This is a Blcking Call
 		c, err := l.Accept()
-	for {
-
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}else{
-			acceptConnection(c)
+			go runConnection(c)
 		}
 	}
 }
 
-func acceptConnection(c net.Conn) {
+func runConnection(c net.Conn) {
 
 
-	buf := make([]byte, 128)
+	for {
+		buf := make([]byte, 128)
 
-	n, err := c.Read(buf)
-	if err != nil {
-		fmt.Errorf("Got Error : %v", err)
-	}
-	fmt.Println(string(buf[:n]), n)
+		n, err := c.Read(buf)
+		if err != nil {
+			fmt.Errorf("Got Error : %v", err)
+		}
+		if n == 0 {
+			break
+		}
+		fmt.Println(string(buf[:n]), n)
 
-	_, err = c.Write([]byte("+PONG\r\n"))
+		_, err = c.Write([]byte("+PONG\r\n"))
 
-	if err != nil {
-		fmt.Errorf("Got Error while writing : %v", err)
+		if err != nil {
+			fmt.Errorf("Got Error while writing : %v", err)
+		}
 	}
 	
 
