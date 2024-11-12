@@ -62,7 +62,7 @@ func runConnection(conn net.Conn) {
 			key := value.array[1].bulk
 			v, err := globalMap[key]
 			if err == false {
-				conn.Write([]byte("+OK\r\n"))
+				conn.Write([]byte("+FAILED\r\n"))
 			}
 			conn.Write([]byte("+"+v+"\r\n"))
 		}else{
