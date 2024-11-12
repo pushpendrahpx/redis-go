@@ -10,7 +10,7 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
-
+var globalMap = map[string]string{}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -52,6 +52,19 @@ func runConnection(conn net.Conn) {
 			conn.Write([]byte("+"+value.array[1].bulk+"\r\n"))
 		}else if command == "PING" {
 			conn.Write([]byte("+PONG\r\n"))
+		}else if command == "SET" {
+			key := value.array[1].bulk
+			v := value.array[2].bulk
+
+			globalMap[key] = v
+			conn.Write([]byte("+OK\r\n"))
+		}else if command == "GET" {
+			key := value.array[1].bulk
+			v, err := globalMap[key]
+			if err == false {
+				conn.Write([]byte("+OK\r\n"))
+			}
+			conn.Write([]byte("+"+v+"\r\n"))
 		}else{
 			conn.Write([]byte("+OK\r\n"))
 		}
