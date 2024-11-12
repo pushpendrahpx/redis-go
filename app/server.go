@@ -23,41 +23,41 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-
-	
 	for {
-		// This is a Blcking Call
-		c, err := l.Accept()
+		// Listen for connections
+		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
-		}else{
-			go runConnection(c)
+			fmt.Println(err)
+			return
 		}
+
+		go runConnection(conn)
+		
 	}
 }
 
-func runConnection(c net.Conn) {
-
-
+func runConnection(conn net.Conn) {
+	
 	for {
-		buf := make([]byte, 128)
-
-		n, err := c.Read(buf)
+		resp := NewResp(conn)
+		value, err := resp.Read()
 		if err != nil {
-			fmt.Errorf("Got Error : %v", err)
+			fmt.Println(err)
+			return
 		}
-		if n == 0 {
-			break
-		}
-		fmt.Println(string(buf[:n]), n)
 
-		_, err = c.Write([]byte("+PONG\r\n"))
-
-		if err != nil {
-			fmt.Errorf("Got Error while writing : %v", err)
+		command := value.array[0].bulk
+		fmt.Println(value.array, len(value.array))
+		if command == "ECHO" {
+			conn.Write([]byte("+"+value.array[1].bulk+"\r\n"))
+		}else if command == "PING" {
+			conn.Write([]byte("+PONG\r\n"))
+		}else{
+			conn.Write([]byte("+OK\r\n"))
 		}
+		
 	}
+
 	
 
 }
