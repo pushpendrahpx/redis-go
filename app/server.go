@@ -4,13 +4,19 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"time"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
 var _ = net.Listen
 var _ = os.Exit
 
-var globalMap = map[string]string{}
+type GlobalMapValue struct {
+	value string
+	exp time.Time
+}
+var globalMap = map[string]GlobalMapValue{}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -55,16 +61,43 @@ func runConnection(conn net.Conn) {
 		}else if command == "SET" {
 			key := value.array[1].bulk
 			v := value.array[2].bulk
+			expiry := time.Now()
+			if len(value.array) >= 5 && value.array[3].bulk == "px" {
+				// means there may be PX <time>
+				delay, err := strconv.Atoi(value.array[4].bulk)
+				if err != nil {
+					conn.Write([]byte("+"+"FailedPX"+"\r\n"))
+					return
+				}
 
-			globalMap[key] = v
+				expiry = time.Now().Add(time.Duration(delay)*time.Millisecond)
+			}else{
+				expiry = time.Time{}
+			}
+			
+			globalMap[key] = GlobalMapValue{value: v, exp: expiry}
 			conn.Write([]byte("+OK\r\n"))
 		}else if command == "GET" {
 			key := value.array[1].bulk
 			v, err := globalMap[key]
 			if err == false {
-				conn.Write([]byte("+FAILED\r\n"))
+				conn.Write([]byte("$-1\r\n"))
+				continue
 			}
-			conn.Write([]byte("+"+v+"\r\n"))
+			current := time.Now()
+			if v.exp.IsZero() {
+				conn.Write([]byte("+"+v.value+"\r\n"))
+				continue
+			}
+			if current.UnixMicro() > v.exp.UnixMicro() {
+				conn.Write([]byte("$-1\r\n"))
+				continue
+			}
+			conn.Write([]byte("+"+v.value+"\r\n"))
+			
+			
+			
+			
 		}else{
 			conn.Write([]byte("+OK\r\n"))
 		}
