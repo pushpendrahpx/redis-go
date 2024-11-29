@@ -18,10 +18,18 @@ type GlobalMapValue struct {
 }
 var globalMap = map[string]GlobalMapValue{}
 
+var CONFIG = map[string]string{}
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
+	for i, flag := range os.Args {
+		if flag == "--dir" && i+1 < len(os.Args) {
+			CONFIG["dir"] = os.Args[i+1]
+		}else if flag == "--dbfilename" && i+1 < len(os.Args)  {
+			CONFIG["dbfilename"] = os.Args[i+1]
+		}
+	}
 	// Uncomment this block to pass the first stage
 	//
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
@@ -98,6 +106,18 @@ func runConnection(conn net.Conn) {
 			
 			
 			
+		}else if command == "CONFIG" {
+			key := value.array[2].bulk
+			if key == "dir" {
+				dir := CONFIG["dir"]
+				conn.Write([]byte("*2\r\n$3\r\ndir\r\n$"+strconv.Itoa(len(dir))+"\r\n"+dir+"\r\n"))
+				
+			}else if key == "dbfilename" {
+				dbfilename := CONFIG["dbfilename"]
+				conn.Write([]byte("*2\r\n$3\r\ndbfilename\r\n$"+strconv.Itoa(len(dbfilename))+"\r\n"+dbfilename+"\r\n"))
+			}else{
+				conn.Write([]byte("+-1\r\n"))
+			}
 		}else{
 			conn.Write([]byte("+OK\r\n"))
 		}
